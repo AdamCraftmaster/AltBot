@@ -3,6 +3,7 @@ const Express = require(`express`)()
 const mysql = require(`mysql`)
 const request = require(`request`)
 const fs = require(`fs`)
+
 function log(input) {
     if (input) console.log(`[Alt Bot]: ${input.toString()}`)
 }
@@ -10,39 +11,43 @@ function log(input) {
 
 async function checkCookie(input) {
     const req = request.defaults()
-    
+
     req.get({
-        url : `https://roblox.com/mobileapi/userinfo`,
-        headers : {"Cookie": `.ROBLOSECURITY=${input}`}}, (e,r,b) => {
-            if (e) console.error(e)
-            return (b.length < 250)
+        url: `https://roblox.com/mobileapi/userinfo`,
+        headers: {
+            "Cookie": `.ROBLOSECURITY=${input}`
         }
-    )
+    }, (e, r, b) => {
+        if (e) console.error(e)
+        return (b.length < 250)
+    })
 }
 
 async function getCookieInfo(input, callback) {
     var Valid = checkCookie(input)
     if (Valid) {
         const req = request.defaults()
-    
+
         req.get({
-            url : `https://roblox.com/mobileapi/userinfo`,
-            headers : {"Cookie": `.ROBLOSECURITY=${input}`}}, (e,r,b) => {
-                if (e) console.error(e)
-                try {
-                    return callback(b)
-                } catch(e) {
-                    console.error(e)
-                }
+            url: `https://roblox.com/mobileapi/userinfo`,
+            headers: {
+                "Cookie": `.ROBLOSECURITY=${input}`
             }
-        )
+        }, (e, r, b) => {
+            if (e) console.error(e)
+            try {
+                return callback(b)
+            } catch (e) {
+                console.error(e)
+            }
+        })
     } else {
         callback(null)
     }
 }
 
 async function getRandomArrayItem(input) {
-    return input[Math.floor(Math.random()*input.length)]
+    return input[Math.floor(Math.random() * input.length)]
 }
 
 async function fetchCookie() {
@@ -55,18 +60,29 @@ async function getCookieAuth(input, callback) {
     if (checkCookie(input)) {
         const req = request.defaults()
         XSRF = req.post({
-            url : `https://auth.roblox.com/v1/authentication-ticket`,
-            headers : {"Cookie": `.ROBLOSECURITY=${input}`, "User-Agent": `Roblox/WinInet`, "Referer": 'https://www.roblox.com/develop', "RBX-For-Gameauth": 'true'}}, (e,r,b) => {
-                if (e) console.error(e)
-                req.post({
-                    url : `https://auth.roblox.com/v1/authentication-ticket`,
-                    headers : {"Cookie": `.ROBLOSECURITY=${input}`,"User-Agent": "Roblox/WinInet", "Referer": "https://www.roblox.com/develop", "RBX-For-Gameauth": "true","X-CSRF-TOKEN": r.headers['x-csrf-token']}}, (z,d,x) => {
-                        if (z) console.error(z)
-                        callback(d.headers['rbx-authentication-ticket'])
-                    }
-                )
+            url: `https://auth.roblox.com/v1/authentication-ticket`,
+            headers: {
+                "Cookie": `.ROBLOSECURITY=${input}`,
+                "User-Agent": `Roblox/WinInet`,
+                "Referer": 'https://www.roblox.com/develop',
+                "RBX-For-Gameauth": 'true'
             }
-        )
+        }, (e, r, b) => {
+            if (e) console.error(e)
+            req.post({
+                url: `https://auth.roblox.com/v1/authentication-ticket`,
+                headers: {
+                    "Cookie": `.ROBLOSECURITY=${input}`,
+                    "User-Agent": "Roblox/WinInet",
+                    "Referer": "https://www.roblox.com/develop",
+                    "RBX-For-Gameauth": "true",
+                    "X-CSRF-TOKEN": r.headers['x-csrf-token']
+                }
+            }, (z, d, x) => {
+                if (z) console.error(z)
+                callback(d.headers['rbx-authentication-ticket'])
+            })
+        })
     } else {
         log(`Invalid cookie: '${input}'.`)
     }
@@ -76,7 +92,7 @@ async function checkGameId(input, callback) {
     const req = request.defaults()
     var result = req.get({
         url: `https://api.roblox.com/Marketplace/ProductInfo?assetId=${input}`
-    }, async (e,r,b) => {
+    }, async (e, r, b) => {
         if (e) console.error(e)
         if (b != null) {
             try {
@@ -86,7 +102,7 @@ async function checkGameId(input, callback) {
                 } else {
                     callback(false)
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error(e)
             }
         } else {
@@ -99,7 +115,7 @@ async function getCookieStatus(input, callback) {
     const req = request.defaults()
     var result = req.get({
         url: `http://api.roblox.com/users/${input}/onlinestatus`
-    }, async (e,r,b) => {
+    }, async (e, r, b) => {
         if (e) console.error(e)
         var Data = await JSON.parse(b)
         if (Data.LastLocation = "Offline") {
@@ -112,45 +128,23 @@ async function getCookieStatus(input, callback) {
 
 Express.get(`/start`, async (req, res) => {
     try {
-        var Key = req.query.GameKey
-        if (Key) {
-            Database.query(`SELECT * FROM Links where secretkey = "${Key}"`, (e,r) => {
-                
-                if (e) throw e
-                if (r.length > 0) {
-                    if (r[0].linkused == `False`) {
-                        Database.query(`UPDATE Links SET linkused = "True" WHERE secretkey = "${Key}"`, async (er,rr) => {
-                            if (er) throw er
-                            var Cookie = r[0].cookie
-                            var CookieIsValid = checkCookie(Cookie)
-                            if (CookieIsValid) {
-                                getCookieAuth(Cookie, (Authcode) => {
-                                    var GameID = r[0].gameid
-                                    var Time = Math.floor(+new Date())
-                                    if (r[0].type == null) {
-                                        res.redirect(`roblox-player:1+launchmode:play+gameinfo:${}+launchtime:${}+placelauncherurl:https://assetgame.roblox.com/game/PlaceLauncher.ashx?request=RequestGame&browserTrackerId=60604189768&placeId=${}&isPlayTogetherGame=true+browsertrackerid:60604189768+robloxLocale:en_us+gameLocale:en_us`)
-                                    } else {
-                                        res.redirect(`roblox-player:1+launchmode:play+gameinfo:${}+launchtime:${}+placelauncherurl:https://assetgame.roblox.com/game/PlaceLauncher.ashx?request=RequestGame&browserTrackerId=60604189768&placeId=${}&isPlayTogetherGame=${}+browsertrackerid:60604189768+robloxLocale:en_us+gameLocale:en_us`)
-                                    }
-                                })
-                            } else {
-                                res.send(`<html><center>The randomly selected cookie is invalid!</center></html>`)
-                            }
-                            
-                            var Authcode = r[0].authcode
-                        })
-                    } else {
-                        res.send(`<html><center>The specified game key has already been used!</center></html>`)
-                    }
+        var Cookie = r[0].cookie
+        var CookieIsValid = checkCookie(Cookie)
+        if (CookieIsValid) {
+            getCookieAuth(Cookie, (Authcode) => {
+                var GameID = r[0].gameid
+                var Time = Math.floor(+new Date())
+                if (r[0].type == null) {
+                    res.redirect(`roblox-player:1+launchmode:play+gameinfo:${}+launchtime:${}+placelauncherurl:https://assetgame.roblox.com/game/PlaceLauncher.ashx?request=RequestGame&browserTrackerId=60604189768&placeId=${}&isPlayTogetherGame=true+browsertrackerid:60604189768+robloxLocale:en_us+gameLocale:en_us`)
                 } else {
-                    res.send(`<html><center>Inavlid game key!</center></html>`)
+                    res.redirect(`roblox-player:1+launchmode:play+gameinfo:${}+launchtime:${}+placelauncherurl:https://assetgame.roblox.com/game/PlaceLauncher.ashx?request=RequestGame&browserTrackerId=60604189768&placeId=${}&isPlayTogetherGame=${}+browsertrackerid:60604189768+robloxLocale:en_us+gameLocale:en_us`)
                 }
             })
         } else {
-            res.send(`<html><center>Inavlid game key!</center></html>`)
+            res.send(`<html><center>The randomly selected cookie is invalid!</center></html>`)
         }
-    } catch(e) {
-        
+    } catch (e) {
+        if (e) console.error(e)
     }
 })
 Express.use((req, res) => {
