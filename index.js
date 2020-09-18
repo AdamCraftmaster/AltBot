@@ -128,11 +128,11 @@ async function getCookieStatus(input, callback) {
 
 Express.get(`/start`, async (req, res) => {
     try {
-        var Cookie = r[0].cookie
+        var Cookie = ""
         var CookieIsValid = checkCookie(Cookie)
         if (CookieIsValid) {
             getCookieAuth(Cookie, (Authcode) => {
-                var GameID = r[0].gameid
+                var GameID = "123"
                 var Time = Math.floor(+new Date())
                 if (r[0].type == null) {
                     res.redirect(`roblox-player:1+launchmode:play+gameinfo:${}+launchtime:${}+placelauncherurl:https://assetgame.roblox.com/game/PlaceLauncher.ashx?request=RequestGame&browserTrackerId=60604189768&placeId=${}&isPlayTogetherGame=true+browsertrackerid:60604189768+robloxLocale:en_us+gameLocale:en_us`)
